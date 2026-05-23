@@ -1,7 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 
-# --- ページの設定（スマホで見やすいようにレスポンシブに設定） ---
+# --- ページの設定（スマホで見やすいようにレス sensory に設定） ---
 st.set_page_config(page_title="設定判別AI", page_icon="🎰", layout="centered")
 
 st.title("🎰 パチスロ設定判別 AI")
@@ -24,10 +24,9 @@ if bell_count > 0:
 
 st.divider() # 区切り線
 
-# --- アイテムくじ・自決袋の入力欄 ---
-st.subheader("アイテムくじ・自決袋のカウント")
+# --- アイテムくじ・自決袋・ミヤマカラスアゲハの入力欄 ---
+st.subheader("アイテムくじ関連のカウント")
 
-# 【改善点①】確定示唆は確定示唆だけで選べるように戻しました
 kuji_result = st.selectbox(
     "アイテムくじの最高確定示唆",
     [
@@ -38,19 +37,25 @@ kuji_result = st.selectbox(
     ]
 )
 
-# 【改善点②】ミヤマカラスアゲハを独立したチェックボックスにしました！
-kuji_butterfly = st.checkbox("📢 ミヤマカラスアゲハを目撃した（設定4・5・6の可能性大）")
-
-col_kuji1, col_kuji2 = st.columns(2)
+# 出現回数を入力する3つの欄（ミヤマカラスアゲハも回数で入力可能にしました）
+col_kuji1, col_kuji2, col_kuji3 = st.columns(3)
 with col_kuji1:
-    jiketsu_count = st.number_input("自決袋の出現回数 (回)", min_value=0, value=0, step=1)
+    jiketsu_count = st.number_input("自決袋 (回)", min_value=0, value=0, step=1)
 with col_kuji2:
-    other_kuji_count = st.number_input("その他アイテムくじ回数 (回)", min_value=0, value=0, step=1)
+    butterfly_count = st.number_input("カラスアゲハ (回)", min_value=0, value=0, step=1)
+with col_kuji3:
+    other_kuji_count = st.number_input("その他くじ (回)", min_value=0, value=0, step=1)
 
-# 総くじ回数の計算と確率表示
-total_kuji = jiketsu_count + other_kuji_count
-if total_kuji > 0 and jiketsu_count > 0:
-    st.text(f"👉 自決袋の出現率: 1/{total_kuji / jiketsu_count:.2f}")
+# 自決袋の確率計算用の「総くじ回数」（自決袋 ＋ その他）
+# ※ミヤマカラスアゲハは出現率不明のため、ここの計算母数からは除外して安全に計算します
+total_kuji_for_calc = jiketsu_count + other_kuji_count
+
+# 画面にリアルタイム確率を表示
+if total_kuji_for_calc > 0 and jiketsu_count > 0:
+    st.text(f"👉 自決袋の出現率: 1/{total_kuji_for_calc / jiketsu_count:.2f} （分母が小さいほど高設定）")
+
+if butterfly_count > 0:
+    st.text(f"🦋 ミヤマカラスアゲハ：{butterfly_count} 回目撃 （設定4・5・6の大チャンス！）")
 
 st.divider() # 区切り線
 
@@ -99,11 +104,6 @@ if st.button("🤖 AI設定判別を実行する", type="primary", use_container
           ・小吉 ＝ 設定2以上確定
           ・中吉 ＝ 設定4以上確定
           ・大吉 ＝ 設定6確定
-
-        ■ アイテムくじのチャンス示唆:
-          ・ミヤマカラスアゲハ ＝ 設定4・5・6（高設定）の可能性が非常に高くなる大チャンス要素です（確定ではありません）。これが「目撃した」となっている場合、低設定（設定1〜3）の期待度を大幅に下げ、設定4・5・6の期待度を強く引き上げてください。
-          
-        ■ トロフィーの示唆: 銅＝設定2以上確定, 銀＝設定3以上確定, 金＝設定4以上確定, キリン柄＝設定5以上確定, 虹＝設定6確定
         
         ■ アイテムくじ内の「自決袋」出現割合（総くじ回数に対する割合・分母の数値）:
           高設定ほど自決袋が出現しやすくなります（分母が小さくなる）。
@@ -113,6 +113,11 @@ if st.button("🤖 AI設定判別を実行する", type="primary", use_container
           設定4 ＝ 1/6.11
           設定5 ＝ 1/5.48
           設定6 ＝ 1/4.85
+
+        ■ アイテムくじ「ミヤマカラスアゲハ」に関するルール:
+          ・出現確率は「解析値不明」です。
+          ・ただし、出現した場合は【設定4・5・6（高設定）の可能性が極めて高い】という強力な特徴を持ちます。
+          ・カウント数が「1回以上」となっている場合、設定1〜3の期待度を大幅に下げ、設定4・5・6の期待度を非常に強く引き上げて判定してください。回数が多いほどその信頼性をさらに高めて解説してください。
 
         ■ ST中のキャラクター振り分け:
         設定1＝女性 50.0%：男性 50.0%：美馬 0％
@@ -135,13 +140,10 @@ if st.button("🤖 AI設定判別を実行する", type="primary", use_container
         **「このデータに基づくと、設定4以上の可能性は【 〇% 】です。」**
 
         ### 【考察と解説】
-        （理由を分かりやすく解説。特に「ミヤマカラスアゲハが出現したかどうか」と「小吉・中吉・大吉などの確定要素」が両立している場合は、矛盾がないようにそのシナジーを考慮して見解を述べること）
+        （理由を分かりやすく解説。「ミヤマカラスアゲハが〇回出現した点（数値不明だが456濃厚要素）」および「自決袋の出現割合」をそれぞれしっかりと区別し、考慮した見解を述べること）
         """
 
         model = genai.GenerativeModel(model_name='gemini-3-flash', system_instruction=system_prompt)
-
-        # ユーザーがチェックを入れたかどうかをテキストにする
-        butterfly_text = "目撃した" if kuji_butterfly else "なし（目撃していない）"
 
         # 画面の入力値をプロンプトにまとめる
         user_prompt = f"""
@@ -149,8 +151,11 @@ if st.button("🤖 AI設定判別を実行する", type="primary", use_container
         ・総回転数：{total_games}G
         ・下段ベル回数：{bell_count}回
         ・アイテムくじの最高確定示唆：{kuji_result}
-        ・ミヤマカラスアゲハの目撃：{butterfly_text}
-        ・アイテムくじの内訳：自決袋 {jiketsu_count}回 / その他アイテム {other_kuji_count}回（総くじ回数：{total_kuji}回）
+        ・アイテムくじの内訳：
+          - 自決袋：{jiketsu_count} 回
+          - ミヤマカラスアゲハ：{butterfly_count} 回
+          - その他アイテム：{other_kuji_count} 回
+          - 自決袋計算用の総くじ回数（自決袋+その他）：{total_kuji_for_calc} 回
         ・トロフィーの最高示唆：{trophy_result}
         ・ST中キャラ：女性{female_count}回、男性{male_count}回、美馬{mima_count}回
         """
