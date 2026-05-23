@@ -1,7 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 
-# --- ページの設定（スマホで見やすいようにレス sensory に設定） ---
+# --- ページの設定（スマホで見やすいようにレスポンシブに設定） ---
 st.set_page_config(page_title="設定判別AI", page_icon="🎰", layout="centered")
 
 st.title("🎰 パチスロ設定判別 AI")
@@ -37,7 +37,7 @@ kuji_result = st.selectbox(
     ]
 )
 
-# 出現回数を入力する3つの欄（ミヤマカラスアゲハも回数で入力可能にしました）
+# 出現回数を入力する3つの欄
 col_kuji1, col_kuji2, col_kuji3 = st.columns(3)
 with col_kuji1:
     jiketsu_count = st.number_input("自決袋 (回)", min_value=0, value=0, step=1)
@@ -47,7 +47,6 @@ with col_kuji3:
     other_kuji_count = st.number_input("その他くじ (回)", min_value=0, value=0, step=1)
 
 # 自決袋の確率計算用の「総くじ回数」（自決袋 ＋ その他）
-# ※ミヤマカラスアゲハは出現率不明のため、ここの計算母数からは除外して安全に計算します
 total_kuji_for_calc = jiketsu_count + other_kuji_count
 
 # 画面にリアルタイム確率を表示
@@ -82,7 +81,7 @@ st.divider()
 # --- 2. 判別ボタンとAI処理 ---
 if st.button("🤖 AI設定判別を実行する", type="primary", use_container_width=True):
     
-    # ユーザーがAPIキーをシークレット（後述）に設定しているか確認
+    # ユーザーがAPIキーをシークレットに設定しているか確認
     try:
         # StreamlitのSecrets機能からAPIキーを読み込む（公開時の安全対策）
         api_key = st.secrets["GEMINI_API_KEY"]
@@ -102,8 +101,8 @@ if st.button("🤖 AI設定判別を実行する", type="primary", use_container
         
         ■ アイテムくじの確定示唆: 
           ・小吉 ＝ 設定2以上確定
-          ・中吉 ＝ 設定4以上確定
-          ・大吉 ＝ 設定6確定
+          ・中吉 ＝ 🥠 設定4以上確定
+          ・大吉 ＝ 🎰 設定6確定
         
         ■ アイテムくじ内の「自決袋」出現割合（総くじ回数に対する割合・分母の数値）:
           高設定ほど自決袋が出現しやすくなります（分母が小さくなる）。
@@ -143,7 +142,8 @@ if st.button("🤖 AI設定判別を実行する", type="primary", use_container
         （理由を分かりやすく解説。「ミヤマカラスアゲハが〇回出現した点（数値不明だが456濃厚要素）」および「自決袋の出現割合」をそれぞれしっかりと区別し、考慮した見解を述べること）
         """
 
-        model = genai.GenerativeModel(model_name='gemini-3-flash', system_instruction=system_prompt)
+        # 【修正点】確実に存在する安定版モデル名に変更しました
+        model = genai.GenerativeModel(model_name='gemini-2.5-flash', system_instruction=system_prompt)
 
         # 画面の入力値をプロンプトにまとめる
         user_prompt = f"""
