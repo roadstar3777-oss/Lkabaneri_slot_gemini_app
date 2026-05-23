@@ -4,12 +4,11 @@ import google.generativeai as genai
 # --- ページの設定（スマホで見やすいようにレスポンシブに設定） ---
 st.set_page_config(page_title="設定判別AI", page_icon="🎰", layout="centered")
 
-st.title("Lカバネリ海門 設定判別 AI_gemini")
+st.title("🎰 パチスロ設定判別 AI")
 st.caption("数値を入力すると、Gemini AIが設定を推測・解説します。")
 
 # --- APIキーの設定 ---
 # 安全のため、後ほどStreamlitの管理画面から登録しますが、テスト用にここに直接書くことも可能です。
-# 開発時は以下のコメントアウトを外して自分のキーを入れてもOKです。
 # genai.configure(api_key="あなたのGemini_APIキー")
 
 # --- 1. 入力インターフェース（スマホで操作しやすいパーツを使用） ---
@@ -25,11 +24,33 @@ if bell_count > 0:
 
 st.divider() # 区切り線
 
-# アイテムくじ
+# --- アイテムくじ・自決袋の入力欄 ---
+st.subheader("アイテムくじ・自決袋のカウント")
+
+# 【アップデート】選択肢に「ミヤマカラスアゲハ」を追加しました！
 kuji_result = st.selectbox(
     "アイテムくじの最高示唆",
-    ["なし（不明）", "小吉（設定2以上確定）", "中吉（設定4以上確定）", "大吉（設定6確定）"]
+    [
+        "なし（不明）", 
+        "小吉（設定2以上確定）", 
+        "ミヤマカラスアゲハ（設定4・5・6の可能性大）", 
+        "中吉（設定4以上確定）", 
+        "大吉（設定6確定）"
+    ]
 )
+
+col_kuji1, col_kuji2 = st.columns(2)
+with col_kuji1:
+    jiketsu_count = st.number_input("自決袋の出現回数 (回)", min_value=0, value=0, step=1)
+with col_kuji2:
+    other_kuji_count = st.number_input("その他アイテムくじ回数 (回)", min_value=0, value=0, step=1)
+
+# 総くじ回数の計算と確率表示
+total_kuji = jiketsu_count + other_kuji_count
+if total_kuji > 0 and jiketsu_count > 0:
+    st.text(f"👉 自決袋の出現率: 1/{total_kuji / jiketsu_count:.2f}")
+
+st.divider() # 区切り線
 
 # トロフィー
 trophy_result = st.selectbox(
@@ -65,14 +86,30 @@ if st.button("🤖 AI設定判別を実行する", type="primary", use_container
 
     with st.spinner("AIが確率を計算し、考察を生成中..."):
         # AIへのルール（System Instruction）
-        system_prompt = """
+        system_prompt = f"""
         あなたはパチスロの設定判別を行うプロのAIアナリストです。
         ユーザーから提供された実戦データと、以下の「解析値（ルール）」を照らし合わせ、統計的な観点と確定要素から「各設定の期待度（%）」と「設定4以上の可能性（%）」を算出し、自然言語で分かりやすく解説してください。
 
         【解析値（ルール）】
         ■ 下段ベル確率: 設定1=1/121.1, 設定2=1/114.4, 設定3=1/112.8, 設定4=1/106.2, 設定5=1/104.2, 設定6=1/99.1
-        ■ アイテムくじの示唆: 小吉＝設定2以上確定, 中吉＝設定4以上確定, 大吉＝設定6確定
+        
+        ■ アイテムくじの示唆: 
+          ・小吉 ＝ 設定2以上確定
+          ・ミヤマカラスアゲハ ＝ 設定4・5・6（高設定）の可能性が非常に高い。これが選ばれた場合、設定1〜3の期待度を大幅に下げ、設定4・5・6の期待度を強力に引き上げてください。
+          ・中吉 ＝ 設定4以上確定
+          ・大吉 ＝ 設定6確定
+          
         ■ トロフィーの示唆: 銅＝設定2以上確定, 銀＝設定3以上確定, 金＝設定4以上確定, キリン柄＝設定5以上確定, 虹＝設定6確定
+        
+        ■ アイテムくじ内の「自決袋」出現割合（総くじ回数に対する割合・分母の数値）:
+          高設定ほど自決袋が出現しやすくなります（分母が小さくなる）。
+          設定1 ＝ 1/8.0
+          設定2 ＝ 1/7.37
+          設定3 ＝ 1/6.74
+          設定4 ＝ 1/6.11
+          設定5 ＝ 1/5.48
+          設定6 ＝ 1/4.85
+
         ■ ST中のキャラクター振り分け:
         設定1＝女性 50.0%：男性 50.0%：美馬 0％
         設定2＝女性 57.5%：男性 42.5%：美馬 0％ 
@@ -94,7 +131,7 @@ if st.button("🤖 AI設定判別を実行する", type="primary", use_container
         **「このデータに基づくと、設定4以上の可能性は【 〇% 】です。」**
 
         ### 【考察と解説】
-        （理由を分かりやすく解説）
+        （理由を分かりやすく解説。特に「ミヤマカラスアゲハが出現した点」や「自決袋の出現割合」を考慮した見解を述べること）
         """
 
         model = genai.GenerativeModel(model_name='gemini-3-flash', system_instruction=system_prompt)
@@ -105,6 +142,7 @@ if st.button("🤖 AI設定判別を実行する", type="primary", use_container
         ・総回転数：{total_games}G
         ・下段ベル回数：{bell_count}回
         ・アイテムくじの最高示唆：{kuji_result}
+        ・アイテムくじの内訳：自決袋 {jiketsu_count}回 / その他アイテム {other_kuji_count}回（総くじ回数：{total_kuji}回）
         ・トロフィーの最高示唆：{trophy_result}
         ・ST中キャラ：女性{female_count}回、男性{male_count}回、美馬{mima_count}回
         """
